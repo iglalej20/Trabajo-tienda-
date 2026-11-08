@@ -1,0 +1,23 @@
+/* Imágenes de producto */
+.img-producto {
+  width: 100%;
+  aspect-ratio: 25 / 16;
+  object-fit: cover;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  background: #1e293b;
+}
+
+.item-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.img-mini {
+  width: 56px;
+  height: 36px;
+  object-fit: cover;
+  border-radius: 4px;
+  flex-shrink: 0;
+}

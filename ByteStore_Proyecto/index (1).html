@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ByteStore | Tienda de Informática</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="imagenes.css">
+</head>
+<body>
+
+  <!-- CABECERA -->
+  <header>
+    <div class="logo">
+      <h1>Byte<span>Store</span> 💻</h1>
+    </div>
+    <button class="btn-cesta" id="btn-abrir-cesta">
+      🛒 Ver Cesta <span class="burbuja" id="contador-cesta">0</span>
+    </button>
+  </header>
+
+  <!-- CONTROLES: CATEGORÍAS, BUSCADOR Y ORDENACIÓN -->
+  <section class="controles">
+    <div class="categorias" id="contenedor-categorias">
+      <button class="btn-cat activo" data-categoria="Todo">Todo</button>
+      <button class="btn-cat" data-categoria="Componentes">Componentes</button>
+      <button class="btn-cat" data-categoria="Periféricos">Periféricos</button>
+      <button class="btn-cat" data-categoria="Portátiles">Portátiles</button>
+    </div>
+
+    <div class="busqueda-orden">
+      <input type="text" id="input-buscar" placeholder="Buscar producto...">
+      <select id="select-orden">
+        <option value="defecto">Ordenar por...</option>
+        <option value="precio-asc">Precio: menor a mayor</option>
+        <option value="precio-desc">Precio: mayor a menor</option>
+        <option value="nombre-az">Nombre: A - Z</option>
+        <option value="stock-desc">Mayor stock disponible</option>
+      </select>
+    </div>
+  </section>
+
+  <!-- ESCAPARATE DE PRODUCTOS -->
+  <main class="contenedor-productos" id="escaparate"></main>
+
+  <!-- POP-UP (MODAL) DE LA CESTA -->
+  <div class="modal-fondo" id="modal-cesta">
+    <div class="modal-caja">
+      <div class="modal-cabecera">
+        <h2>Tu Cesta de la Compra</h2>
+        <button class="btn-cerrar" id="btn-cerrar-cesta">&times;</button>
+      </div>
+      <div class="envio-box" id="info-usuario">Cargando datos del cliente...</div>
+      <div class="lista-cesta" id="lista-cesta"></div>
+      <div class="modal-pie">
+        <span class="total-texto">Total: <span id="precio-total">0.00</span> €</span>
+        <button class="btn-comprar" id="btn-finalizar">Finalizar Compra</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTENEDOR DE NOTIFICACIONES TOAST -->
+  <div id="contenedor-toast"></div>
+
+  <!-- DATOS DE RESPALDO (para abrir con doble clic, sin servidor) -->
+  <script src="datos.js"></script>
+  <script src="imagenes.js"></script>
+
+  <!-- LÓGICA JAVASCRIPT -->
+  <script>
+    // Variables globales de estado
+    let catalogoProductos = [];
+    let datosUsuario = {};
+    let carritoIds = JSON.parse(localStorage.getItem('carrito_bytestore')) || [];
+    let categoriaActual = 'Todo';
+
+    // Ruta de la imagen de un producto: images/<id>.svg
+    // (si el producto trae un campo "image" en el JSON, se usa ese)
+    function rutaImagen(prod) {
+      return prod.image || IMAGENES[prod.id] || `images/${prod.id}.svg`;
+    }
+
+    // 1. CARGA DE DATOS EXTERNOS (JSON)
+    async function iniciarTienda() {
+      try {
+        try {
+          const resProd = await fetch('productos.json');
+          catalogoProductos = await resProd.json();
+
+          const resUser = await fetch('userData.json');
+          datosUsuario = await resUser.json();
+        } catch (errorFetch) {
+          // Abierto con file:// el navegador bloquea fetch(): usamos los datos de datos.js
+          console.warn('fetch() no disponible, usando datos de respaldo (datos.js)');
+          catalogoProductos = PRODUCTOS_RESPALDO;
+          datosUsuario = USUARIO_RESPALDO;
+        }
+
+        document.getElementById('info-usuario').textContent =
+          `📦 Enviando pedido a: ${datosUsuario.name}, ${datosUsuario.address}`;
+
+        renderizarEscaparate();
+        actualizarContadorCesta();
+      } catch (error) {
+        console.error('Error cargando los archivos JSON:', error);
+        document.getElementById('escaparate').innerHTML =
+          '<p>Error al cargar los datos. Recuerda abrir el proyecto con Live Server o un servidor local para que fetch() pueda leer los archivos JSON.</p>';
+      }
+    }
+
+    // 2. VISUALIZACIÓN Y FILTRADO DEL ESCAPARATE
+    function renderizarEscaparate() {
+      const contenedor = document.getElementById('escaparate');
+      const textoBusqueda = document.getElementById('input-buscar').value.toLowerCase();
+      const criterioOrden = document.getElementById('select-orden').value;
+
+      contenedor.innerHTML = '';
+
+      // Filtrar productos (ocultar stock 0, filtrar por categoría y buscador)
+      let productosFiltrados = catalogoProductos.filter(prod => {
+        if (prod.stock <= 0) return false;
+        const coincideCategoria = (categoriaActual === 'Todo') || (prod.category === categoriaActual);
+        const coincideTexto = prod.name.toLowerCase().includes(textoBusqueda) ||
+                              prod.description.toLowerCase().includes(textoBusqueda);
+        return coincideCategoria && coincideTexto;
+      });
+
+      // Ordenar productos según el select
+      if (criterioOrden === 'precio-asc') {
+        productosFiltrados.sort((a, b) => a.price - b.price);
+      } else if (criterioOrden === 'precio-desc') {
+        productosFiltrados.sort((a, b) => b.price - a.price);
+      } else if (criterioOrden === 'nombre-az') {
+        productosFiltrados.sort((a, b) => a.name.localeCompare(b.name));
+      } else if (criterioOrden === 'stock-desc') {
+        productosFiltrados.sort((a, b) => b.stock - a.stock);
+      }
+
+      // Generar tarjetas HTML
+      productosFiltrados.forEach(prod => {
+        const tarjeta = document.createElement('article');
+        tarjeta.className = 'tarjeta';
+        tarjeta.innerHTML = `
+          <div>
+            <img class="img-producto" src="${rutaImagen(prod)}" alt="${prod.name}" loading="lazy">
+            <div class="etiqueta-cat">${prod.category}</div>
+            <h3>${prod.name}</h3>
+            <p>${prod.description}</p>
+          </div>
+          <div class="info-inferior">
+            <div class="precio-stock">
+              <span class="precio">${prod.price.toFixed(2)} €</span>
+              <span class="stock">Stock: ${prod.stock}</span>
+            </div>
+            <button class="btn-add" onclick="agregarAlCarrito(${prod.id})">
+              Añadir a la cesta
+            </button>
+          </div>
+        `;
+        contenedor.appendChild(tarjeta);
+      });
+    }
+
+    // 3. LÓGICA DEL CARRITO DE LA COMPRA
+    function agregarAlCarrito(idProducto) {
+      const producto = catalogoProductos.find(p => p.id === idProducto);
+      const cantidadEnCarrito = carritoIds.filter(id => id === idProducto).length;
+
+      if (cantidadEnCarrito >= producto.stock) {
+        mostrarToast(`No hay más stock disponible de ${producto.name}`);
+        return;
+      }
+
+      carritoIds.push(idProducto);
+      guardarCarrito();
+      actualizarContadorCesta();
+      mostrarToast(`Producto ${producto.name} añadido`);
+    }
+
+    function cambiarCantidad(idProducto, cambio) {
+      const producto = catalogoProductos.find(p => p.id === idProducto);
+      const cantidadActual = carritoIds.filter(id => id === idProducto).length;
+
+      if (cambio === 1) {
+        if (cantidadActual < producto.stock) {
+          carritoIds.push(idProducto);
+        } else {
+          mostrarToast(`Límite de stock alcanzado (${producto.stock})`);
+        }
+      } else if (cambio === -1) {
+        const index = carritoIds.indexOf(idProducto);
+        if (index !== -1) carritoIds.splice(index, 1);
+      }
+
+      guardarCarrito();
+      actualizarContadorCesta();
+      renderizarModalCesta();
+    }
+
+    function eliminarProductoDelCarrito(idProducto) {
+      carritoIds = carritoIds.filter(id => id !== idProducto);
+      guardarCarrito();
+      actualizarContadorCesta();
+      renderizarModalCesta();
+    }
+
+    function renderizarModalCesta() {
+      const lista = document.getElementById('lista-cesta');
+      const spanTotal = document.getElementById('precio-total');
+      lista.innerHTML = '';
+
+      if (carritoIds.length === 0) {
+        lista.innerHTML = '<p style="text-align:center; color:#64748b; padding:20px;">La cesta está vacía.</p>';
+        spanTotal.textContent = '0.00';
+        return;
+      }
+
+      // Agrupar IDs repetidos para saber la cantidad de cada producto
+      const conteo = {};
+      carritoIds.forEach(id => {
+        conteo[id] = (conteo[id] || 0) + 1;
+      });
+
+      let precioTotal = 0;
+
+      Object.keys(conteo).forEach(idStr => {
+        const id = Number(idStr);
+        const prod = catalogoProductos.find(p => p.id === id);
+        const cantidad = conteo[id];
+        if (!prod) return;
+
+        const subtotal = prod.price * cantidad;
+        precioTotal += subtotal;
+
+        const item = document.createElement('div');
+        item.className = 'item-cesta';
+        item.innerHTML = `
+          <div class="item-info">
+            <img class="img-mini" src="${rutaImagen(prod)}" alt="${prod.name}">
+            <div>
+              <strong>${prod.name}</strong><br>
+              <small>${prod.price.toFixed(2)} € x ${cantidad} = ${subtotal.toFixed(2)} €</small>
+            </div>
+          </div>
+          <div class="item-controles">
+            <button class="btn-cant" onclick="cambiarCantidad(${prod.id}, -1)">-</button>
+            <span>${cantidad}</span>
+            <button class="btn-cant" onclick="cambiarCantidad(${prod.id}, 1)">+</button>
+            <button class="btn-del" onclick="eliminarProductoDelCarrito(${prod.id})">🗑️</button>
+          </div>
+        `;
+        lista.appendChild(item);
+      });
+
+      spanTotal.textContent = precioTotal.toFixed(2);
+    }
+
+    function guardarCarrito() {
+      localStorage.setItem('carrito_bytestore', JSON.stringify(carritoIds));
+    }
+
+    function actualizarContadorCesta() {
+      document.getElementById('contador-cesta').textContent = carritoIds.length;
+    }
+
+    // 4. NOTIFICACIONES TOAST (3 SEGUNDOS)
+    function mostrarToast(mensaje) {
+      const contenedor = document.getElementById('contenedor-toast');
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.textContent = mensaje;
+      contenedor.appendChild(toast);
+
+      setTimeout(() => {
+        toast.remove();
+      }, 3000);
+    }
+
+    // 5. EVENTOS DE INTERFAZ
+    document.querySelectorAll('.btn-cat').forEach(boton => {
+      boton.addEventListener('click', () => {
+        document.querySelectorAll('.btn-cat').forEach(b => b.classList.remove('activo'));
+        boton.classList.add('activo');
+        categoriaActual = boton.dataset.categoria;
+        renderizarEscaparate();
+      });
+    });
+
+    document.getElementById('input-buscar').addEventListener('input', renderizarEscaparate);
+    document.getElementById('select-orden').addEventListener('change', renderizarEscaparate);
+
+    document.getElementById('btn-abrir-cesta').addEventListener('click', () => {
+      renderizarModalCesta();
+      document.getElementById('modal-cesta').classList.add('mostrar');
+    });
+
+    document.getElementById('btn-cerrar-cesta').addEventListener('click', () => {
+      document.getElementById('modal-cesta').classList.remove('mostrar');
+    });
+
+    document.getElementById('btn-finalizar').addEventListener('click', () => {
+      if (carritoIds.length === 0) {
+        mostrarToast('Añade algún producto antes de finalizar la compra');
+        return;
+      }
+      carritoIds = [];
+      guardarCarrito();
+      actualizarContadorCesta();
+      document.getElementById('modal-cesta').classList.remove('mostrar');
+      mostrarToast('¡Compra realizada con éxito!');
+    });
+
+    // Arrancar aplicación
+    iniciarTienda();
+  </script>
+</body>
+</html>

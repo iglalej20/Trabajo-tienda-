@@ -1,0 +1,27 @@
+// Copia de productos.json y userData.json para poder abrir la tienda con doble clic (file://).
+// Si usas Live Server, la web sigue leyendo los .json; esto solo se usa cuando fetch() falla.
+// Si editas productos.json, actualiza también este archivo.
+const PRODUCTOS_RESPALDO = [
+  { "id": 1, "name": "Procesador AMD Ryzen 7 5800X", "description": "8 núcleos y 16 hilos a 3.8GHz para gaming y multitarea.", "price": 219.99, "stock": 8, "category": "Componentes" },
+  { "id": 2, "name": "Tarjeta Gráfica RTX 4060 8GB", "description": "Arquitectura Ada Lovelace con DLSS 3 y Ray Tracing.", "price": 329.5, "stock": 5, "category": "Componentes" },
+  { "id": 3, "name": "Memoria RAM Corsair 32GB DDR4", "description": "Kit 2x16GB a 3200MHz con disipador de aluminio negro.", "price": 74.9, "stock": 14, "category": "Componentes" },
+  { "id": 4, "name": "Disco SSD Samsung 980 Pro 1TB", "description": "NVMe M.2 PCIe 4.0 con lectura de hasta 7000 MB/s.", "price": 95.0, "stock": 12, "category": "Componentes" },
+  { "id": 5, "name": "Placa Base ASUS TUF B550-PLUS", "description": "Socket AM4 ATX con PCIe 4.0, WiFi 6 y disipadores VRM.", "price": 139.95, "stock": 6, "category": "Componentes" },
+  { "id": 6, "name": "Fuente Corsair RM750e 750W", "description": "Certificación 80 Plus Gold totalmente modular y silenciosa.", "price": 109.9, "stock": 9, "category": "Componentes" },
+  { "id": 7, "name": "Monitor LG UltraGear 27\" 144Hz", "description": "Panel IPS Full HD con 1ms de respuesta y FreeSync.", "price": 189.0, "stock": 7, "category": "Periféricos" },
+  { "id": 8, "name": "Teclado Mecánico Logitech G Pro", "description": "Diseño compacto TKL con switches táctiles GX Blue e iluminación RGB.", "price": 115.0, "stock": 10, "category": "Periféricos" },
+  { "id": 9, "name": "Ratón Razer DeathAdder V2", "description": "Sensor óptico Focus+ de 20000 DPI y diseño ergonómico.", "price": 54.99, "stock": 18, "category": "Periféricos" },
+  { "id": 10, "name": "Auriculares HyperX Cloud II", "description": "Sonido envolvente 7.1 virtual con micrófono desmontable.", "price": 79.99, "stock": 15, "category": "Periféricos" },
+  { "id": 11, "name": "Webcam Logitech C920 HD Pro", "description": "Videollamadas en 1080p a 30fps con corrección de luz automática.", "price": 68.5, "stock": 11, "category": "Periféricos" },
+  { "id": 12, "name": "Portátil Lenovo IdeaPad Gaming 3", "description": "Intel Core i5, 16GB RAM, 512GB SSD y gráfica RTX 3050.", "price": 749.0, "stock": 4, "category": "Portátiles" },
+  { "id": 13, "name": "Portátil ASUS ROG Strix G16", "description": "Intel Core i7, 32GB RAM, 1TB SSD y pantalla 165Hz.", "price": 1299.0, "stock": 3, "category": "Portátiles" },
+  { "id": 14, "name": "Portátil HP Pavilion 15", "description": "Ultrabook ligero con Ryzen 5, 16GB RAM y batería de larga duración.", "price": 629.0, "stock": 6, "category": "Portátiles" },
+  { "id": 15, "name": "MacBook Air M2 13\"", "description": "Chip Apple M2, 8GB RAM, 256GB SSD y pantalla Liquid Retina.", "price": 1149.0, "stock": 5, "category": "Portátiles" },
+  { "id": 16, "name": "Tarjeta Gráfica RTX 3080 Founder", "description": "Edición descatalogada sin unidades en almacén.", "price": 699.0, "stock": 0, "category": "Componentes" },
+  { "id": 17, "name": "Alfombrilla SteelSeries QcK XXL", "description": "Agotada temporalmente en proveedor.", "price": 29.99, "stock": 0, "category": "Periféricos" }
+];
+
+const USUARIO_RESPALDO = {
+  "name": "Alex García López",
+  "address": "Calle de Alcalá 142, 4ºB, 28009 Madrid"
+};
